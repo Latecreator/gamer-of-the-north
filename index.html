@@ -198,7 +198,7 @@
                 <h3>DICE ROLLER</h3>
                 <div id="dice-output"></div>
                 <div class="dice-input-row">
-                    <input type="text" id="dice-input" placeholder="1d20, 3d6+2...">
+                    <input type="text" id="dice-input" placeholder="adv20, dis10, 2d6+2...">
                     <button class="roll-btn" onclick="rollDice()">ROLL</button>
                 </div>
             </aside>
@@ -311,28 +311,46 @@
 
         // --- 6. DICE ROLLER ---
         const DICE_REGEX = /^(\d+)d(\d+)([+-]\d+)?$/i;
+        const ADV_DIS_REGEX = /^(adv|dis)(\d+)$/i;
         const MAX_LOG = 50;
 
         function rollDice() {
             const input = document.getElementById('dice-input');
-            const notation = input.value.trim();
+            const notation = input.value.trim().toLowerCase();
             const output = document.getElementById('dice-output');
-
-            const match = notation.match(DICE_REGEX);
             const p = document.createElement('p');
 
-            if (!match) {
-                p.className = 'error';
-                p.textContent = `> Invalid: "${notation}"`;
-            } else {
-                const count = parseInt(match[1]);
-                const sides = parseInt(match[2]);
-                const mod = match[3] ? parseInt(match[3]) : 0;
+            const standardMatch = notation.match(DICE_REGEX);
+            const advDisMatch = notation.match(ADV_DIS_REGEX);
+
+            if (advDisMatch) {
+                // Handle Advantage/Disadvantage (adv20, dis10)
+                const mode = advDisMatch[1];
+                const sides = parseInt(advDisMatch[2]);
+                const roll1 = Math.floor(Math.random() * sides) + 1;
+                const roll2 = Math.floor(Math.random() * sides) + 1;
+                
+                let finalResult;
+                if (mode === 'adv') {
+                    finalResult = Math.max(roll1, roll2);
+                    p.textContent = `> ${notation.toUpperCase()} → [${roll1}, ${roll2}] Max = ${finalResult}`;
+                } else {
+                    finalResult = Math.min(roll1, roll2);
+                    p.textContent = `> ${notation.toUpperCase()} → [${roll1}, ${roll2}] Min = ${finalResult}`;
+                }
+            } else if (standardMatch) {
+                // Handle Standard Rolls (2d6+2)
+                const count = parseInt(standardMatch[1]);
+                const sides = parseInt(standardMatch[2]);
+                const mod = standardMatch[3] ? parseInt(standardMatch[3]) : 0;
 
                 const rolls = Array.from({ length: count }, () => Math.floor(Math.random() * sides) + 1);
                 const sum = rolls.reduce((a, b) => a + b, 0) + mod;
                 const modStr = mod !== 0 ? ` ${mod >= 0 ? '+' : ''}${mod}` : '';
                 p.textContent = `> ${notation} → [${rolls.join(', ')}]${modStr} = ${sum}`;
+            } else {
+                p.className = 'error';
+                p.textContent = `> Invalid: "${notation}" (Try 1d20, adv20, or dis10)`;
             }
 
             output.appendChild(p);
